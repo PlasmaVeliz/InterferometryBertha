@@ -167,6 +167,16 @@ def save_images(images, names, folder):
         Image.fromarray(images[name]).save(
             folder+"/"+name+".png")
 
+# save images in dict 'images' with keys in 'names' to 'folder'
+# as "[name].tiff"
+def save_image_tiff(images, names, folder):
+    
+
+    for name in names:
+        Image.fromarray(images[name]).save(
+            os.path.join(folder, f"{name}.tiff")
+        )
+
 def main():
     ui = UI()
     
