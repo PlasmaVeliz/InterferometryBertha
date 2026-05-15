@@ -45,6 +45,8 @@ names = ["shot"]
 (files, images, folder) = utils.select_images(names)
 dateshot = folder.split('/')[-3]
 
+print(images["shot"])
+
 #%%
 '''
 MATH
@@ -57,13 +59,11 @@ arealdensity = getArealElectronDensity(images["shot"],L, n_c)
 
 #%%
 '''
-PLOTTING
+PLOTTING for PNG
 '''
-ogfoldername = '2026/*.png'
 outputfolder = '2026/out'
 
-filename = os.path.basename(ogfoldername)
-
+shot_name = utils.splitpath(files["shot"])[-1]
 
 fig = plt.figure(figsize=(8, 6))
 plt.imshow(abs(arealdensity), cmap='plasma')
@@ -75,20 +75,44 @@ plt.ylabel("Y [\u03bcm]")
 
 
 
-filepath = os.path.join(outputfolder, filename)
+filepath = os.path.join(outputfolder, shot_name)
+
 os.makedirs(outputfolder, exist_ok=True)
+
 plt.savefig(filepath)
 
 plt.show()
 
 #%%
 '''
+SAVING TXT FILE
+'''
+
+outputfolder = '2026/textfile'
+
+os.makedirs(outputfolder, exist_ok=True)
+
+filepath = os.path.join(outputfolder, "areal_density.txt")
+
+values = arealdensity
+
+values_reshaped = values.reshape(values.shape[0], -1)
+
+np.savetxt(filepath, values_reshaped)
+
+#%%
+'''
 OVERLAYING PLOTS
 '''
+
 #stackexchange
 def radial_profile(image, center=None):
 
-    y, x = np.indices(image.shape)
+    image = np.asarray(image, dtype=np.float32)
+
+    gray_image = image.mean(axis=2)
+
+    y, x = np.indices(gray_image.shape)
 
     if center is None:
         center = (x//2, y//2)
@@ -98,7 +122,7 @@ def radial_profile(image, center=None):
     r = np.sqrt((x - x0)**2 + (y - y0)**2)
     r = r.astype(int)
 
-    tbin = np.bincount(r.ravel(), weights=image.ravel())
+    tbin = np.bincount(r.ravel(), weights=gray_image.ravel())
     nr = np.bincount(r.ravel())
 
     radialprofile = tbin / nr
@@ -106,22 +130,23 @@ def radial_profile(image, center=None):
 
     return radii, radialprofile
 
-densities = []
-for filename in glob.glob('2026/out/*.png')
-    im = Image.open(filename)
-    densities.append(im)
 
-for i in densities:
-    radial_profile(densities[i], center=None)
+for filename in glob.glob('2026/out/*.png'):
+    img = Image.open(filename)
     
+    radii, radialprofile = radial_profile(img)
 
+    base = os.path.basename(filename)
 
+    label = os.path.splitext(base)[0]
 
+    plt.plot(radii, radialprofile, label=label)
 
-plt.grid()
+    
 plt.xlabel("Radius [\u03bcm]")
 plt.ylabel("Areal Electron Density [m^-2]")
 plt.legend()
+plt.grid()
 plt.show()
 
 #%%
@@ -129,13 +154,23 @@ plt.show()
 IMAGE EXPORT
 '''
 
-save_images = ["shot"]
+outputfolder = '2026/tifff'
 
-os.makedirs(folder+"2026/out", exist_ok=True)
-utils.save_images(images, save_images, folder+"2026/out")
+shot_name = utils.splitpath(files["shot"])[-1]
 
-for name in save_images:
-    Image.fromarray(images[name]).save(folder+"2026/out"+dateshot+"_"+name+".png")
+#save_images = ["shot"]
+
+filepath = os.path.join(outputfolder, shot_name)
+
+os.makedirs(outputfolder, exist_ok=True)
+
+plt.savefig(filepath, format="tiff")
+
+#os.makedirs(folder+"2026/out", exist_ok=True)
+#utils.save_image_tiff(images, save_images, os.path.join(folder))
+
+#for name in save_images:
+#    Image.fromarray(images[name]).save(folder+"2026/out"+dateshot+"_"+name+".png")
 
 
 # %%
