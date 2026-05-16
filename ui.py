@@ -150,12 +150,12 @@ def prefix_contents(directory, prefix, skip=[]):
 # dicts of [name]:[file] and [name]:[image array], as well as the path
 # of the folder the first image is from
 # NOTE: works for raw images BUT will convert to 8-bit
-def select_images(names):
+def select_txt(names):
     ui = UI()     # create UI object for file select dialog
 
     files = {name:ui.getfile("Choose "+name) for name in names} 
 
-    images = {name:np.array(Image.open(files[name])) for name in names}
+    images = {name:np.loadtxt(files[name]) for name in names}
 
     folder = get_parent(files[names[0]]) 
     return (files, images, folder) 
