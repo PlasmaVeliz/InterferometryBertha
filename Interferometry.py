@@ -42,7 +42,7 @@ FILE IMPORT
 '''
 
 names = ["shot"]
-(files, images, folder) = utils.select_images(names)
+(files, images, folder) = utils.select_txt(names)
 dateshot = folder.split('/')[-3]
 
 print(images["shot"])
@@ -51,11 +51,13 @@ print(images["shot"])
 '''
 MATH
 '''
-
+#just the math to get the areal electron density
 def getArealElectronDensity(phase_array, wavelength, critical_density):
     return (-phase_array)*wavelength*critical_density / np.pi
 
 arealdensity = getArealElectronDensity(images["shot"],L, n_c)
+
+print(arealdensity)
 
 #%%
 '''
@@ -75,7 +77,7 @@ plt.ylabel("Y [\u03bcm]")
 
 
 
-filepath = os.path.join(outputfolder, shot_name)
+filepath = os.path.join(outputfolder, shot_name + ".png")
 
 os.makedirs(outputfolder, exist_ok=True)
 
@@ -87,42 +89,50 @@ plt.show()
 '''
 SAVING TXT FILE
 '''
+# giving an output folder for the new images or txt files. 
+# this also remembers the original name of the imported files
+# then saves it onto the new folder with the same name. 
+
 
 outputfolder = '2026/textfile'
 
+shot_name = utils.splitpath(files["shot"])[-1]
+
+filepath = os.path.join(outputfolder, shot_name)
+
 os.makedirs(outputfolder, exist_ok=True)
 
-filepath = os.path.join(outputfolder, "areal_density.txt")
+np.savetxt(filepath, arealdensity)
 
-values = arealdensity
-
-values_reshaped = values.reshape(values.shape[0], -1)
-
-np.savetxt(filepath, values_reshaped)
 
 #%%
 '''
 OVERLAYING PLOTS
 '''
+#done to take off the offset value above plot
+fig, ax = plt.subplots()
+
+outputfolder = '2026/radialprofile'
 
 #stackexchange
 def radial_profile(image, center=None):
 
     image = np.asarray(image, dtype=np.float32)
 
-    gray_image = image.mean(axis=2)
+    #gray_image = image.mean(axis=2)
 
-    y, x = np.indices(gray_image.shape)
+    y, x = np.indices(image.shape)
 
     if center is None:
-        center = (x//2, y//2)
+        center = (image.shape[1] // 2,
+                  image.shape[0] // 2)
 
     x0, y0 = center
 
     r = np.sqrt((x - x0)**2 + (y - y0)**2)
     r = r.astype(int)
 
-    tbin = np.bincount(r.ravel(), weights=gray_image.ravel())
+    tbin = np.bincount(r.ravel(), weights=image.ravel())
     nr = np.bincount(r.ravel())
 
     radialprofile = tbin / nr
@@ -131,22 +141,39 @@ def radial_profile(image, center=None):
     return radii, radialprofile
 
 
-for filename in glob.glob('2026/out/*.png'):
-    img = Image.open(filename)
+for filename in glob.glob('2026/textfile/*.txt'):
+    #loads in the txt file
+    img = np.loadtxt(filename)
     
-    radii, radialprofile = radial_profile(img)
+    #choosing the most dense of all the txt files as the center
+    #done because all images are cropped differently in tnt
+    y0, x0 = np.unravel_index(np.argmax(img), img.shape)
 
+    #getting the x, y for plot
+    radii, radialprofile = radial_profile(img, center=(x0,y0))
+
+    #changing it to cm^-2        
+    radial_profile_cm = radialprofile * 1e-4
+
+    #saving the label and using that for the legend
     base = os.path.basename(filename)
-
     label = os.path.splitext(base)[0]
+    print("label: ", label)
 
-    plt.plot(radii, radialprofile, label=label)
-
+    ax.plot(radii, radial_profile_cm, label=label)
     
-plt.xlabel("Radius [\u03bcm]")
-plt.ylabel("Areal Electron Density [m^-2]")
-plt.legend()
+ax.set_xlabel("Radius [\u03bcm]")
+ax.set_ylabel("Areal Electron Density [cm^-2]")
+ax.yaxis.get_offset_text().set_visible(False)
+plt.legend(loc="upper right")
 plt.grid()
+
+filepath = os.path.join(outputfolder, "radial_profile.png")
+
+os.makedirs(outputfolder, exist_ok=True)
+
+plt.savefig(filepath)
+
 plt.show()
 
 #%%
@@ -171,6 +198,3 @@ plt.savefig(filepath, format="tiff")
 
 #for name in save_images:
 #    Image.fromarray(images[name]).save(folder+"2026/out"+dateshot+"_"+name+".png")
-
-
-# %%
